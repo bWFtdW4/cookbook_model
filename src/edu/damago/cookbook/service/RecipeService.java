@@ -68,7 +68,6 @@ public class RecipeService {
 		@QueryParam("description") final String description,
 		@QueryParam("instruction") final String instruction,
 		@QueryParam("instructionFragment") final String instructionFragment
-
 		
 		
 	) throws ClientErrorException {
@@ -88,8 +87,6 @@ public class RecipeService {
 		query.setParameter("instruction", instruction);
 		query.setParameter("instructionFragment", instructionFragment);
 
-
-
 	
 		final Recipe[] types = query
 			.getResultList()
@@ -103,9 +100,7 @@ public class RecipeService {
 	}
 		
 		
-		
-		
-		
+	
 
 	/**
 	 * HTTP Signature: GET recipes/<id> IN: - OUT: application/json
