@@ -30,7 +30,8 @@ public class RecipeService {
 		+ "(:descriptionFragment is null or t.description like concat('%', :descriptionFragment, '%')) and "
 		+ "(:category is null or t.category = :category) and "
 		+ "(:description is null or t.description = :description) and "
-		+ "(:instruction is null or t.instruction = :instruction)"
+		+ "(:instruction is null or t.instruction = :instruction) and "
+		+ "(:instructionFragment is null or t.instruction like concat('%', :instructionFragment, '%'))"
 		;
 		
 	
@@ -65,7 +66,8 @@ public class RecipeService {
 		@QueryParam("description-fragment") final String descriptionFragment,
 		@QueryParam("category") final Category category,
 		@QueryParam("description") final String description,
-		@QueryParam("instruction") final String instruction
+		@QueryParam("instruction") final String instruction,
+		@QueryParam("instructionFragment") final String instructionFragment
 
 		
 		
@@ -84,6 +86,7 @@ public class RecipeService {
 		query.setParameter("category", category);
 		query.setParameter("description", description);
 		query.setParameter("instruction", instruction);
+		query.setParameter("instructionFragment", instructionFragment);
 
 
 
