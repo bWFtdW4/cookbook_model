@@ -29,7 +29,9 @@ public class RecipeService {
 		+ "(:title is null or t.title = :title) and "
 		+ "(:descriptionFragment is null or t.description like concat('%', :descriptionFragment, '%')) and "
 		+ "(:category is null or t.category = :category) and "
-		+ "(:description is null or t.description = :description)";
+		+ "(:description is null or t.description = :description) and "
+		+ "(:instruction is null or t.instruction = :instruction)"
+		;
 		
 	
 	/**
@@ -62,7 +64,9 @@ public class RecipeService {
 		@QueryParam("title") final String title,
 		@QueryParam("description-fragment") final String descriptionFragment,
 		@QueryParam("category") final Category category,
-		@QueryParam("description") final String description
+		@QueryParam("description") final String description,
+		@QueryParam("instruction") final String instruction
+
 		
 		
 	) throws ClientErrorException {
@@ -79,6 +83,8 @@ public class RecipeService {
 		query.setParameter("descriptionFragment", descriptionFragment);
 		query.setParameter("category", category);
 		query.setParameter("description", description);
+		query.setParameter("instruction", instruction);
+
 
 
 	

@@ -39,7 +39,7 @@ public class RecipeService {
 //		+ "(:title is null or t.title = :title) and "
 //		+ "(:category is null or t.category = :category) and "
 //		+ "(:description is null or t.description = :description) and "
-		+ "(:instruction is null or t.instruction = :instruction) and "
+//		+ "(:instruction is null or t.instruction = :instruction) and "
 		+ "(:owner is null or t.owner = :owner) and "
 		+ "(:ingredients is null or t.ingredients = :ingredients)"
 		;
@@ -80,8 +80,8 @@ public class RecipeService {
 //		@QueryParam("title") final String title,
 //		@QueryParam("category") final Category category,
 //		@QueryParam("description") final String description,
-		@QueryParam("instruction") final String instruction,
-		@QueryParam("owner") final Person owner
+//		@QueryParam("instruction") final String instruction,
+		@QueryParam("owner") final Person owner,
 		@QueryParam("ingredients") final Set<Ingredient> ingredients
 		
 		
@@ -103,7 +103,7 @@ public class RecipeService {
 //		query.setParameter("title", title);
 //		query.setParameter("category", category);
 //		query.setParameter("description", description);
-		query.setParameter("instruction", instruction);
+//		query.setParameter("instruction", instruction);
 		query.setParameter("owner", owner);
 		query.setParameter("ingredients",ingredients);
 		
