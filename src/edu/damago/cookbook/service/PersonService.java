@@ -19,16 +19,21 @@ import edu.damago.tool.RestJpaLifecycleProvider;
 
 @Path("people")
 public class PersonService {
-	static private final String QUERY_TYPES = "select t.identity from Person as t where "
-		+ "(:minCreated is null or t.created >= :minCreated) and "
-		+ "(:maxCreated is null or t.created <= :maxCreated) and "
-		+ "(:minModified is null or t.modified >= :minModified) and "
-		+ "(:maxModified is null or t.modified <= :maxModified) and "
-		+ "(:email is null or t.email = :email) and "
-		+ "(:emailFragment is null or t.email like concat('%', :emailFragment, '%'))"
-
-
-		;
+	static private final String QUERY_TYPES = "select q.identity from Person as q where "
+		+ "(:minCreated is null or q.created >= :minCreated) and "
+		+ "(:maxCreated is null or q.created <= :maxCreated) and "
+		+ "(:minModified is null or q.modified >= :minModified) and "
+		+ "(:maxModified is null or q.modified <= :maxModified) and "
+		+ "(:email is null or q.email = :email) and "
+		+ "(:emailFragment is null or q.email like concat('%', :emailFragment, '%')) and "
+		+ "(:group is null or q.group = :group) and "
+		+ "(:title is null or q.name.title = :title) and "
+		+ "(:surname is null or q.name.family = :surname) and "
+		+ "(:forename is null or q.name.given = :forename) and "
+		+ "(:street is null or q.address.street = :street) and "
+		+ "(:city is null or q.address.city = :city) and "
+		+ "(:country is null or q.address.country = :country) and "
+		+ "(:postcode is null or q.address.postcode = :postcode)";
 	
 	
 	
@@ -63,10 +68,17 @@ public class PersonService {
 		@QueryParam("min-modified") final Long minModified,
 		@QueryParam("max-modified") final Long maxModified,
 		@QueryParam("email") final String email,
-		@QueryParam("emailFragment") final String emailFragment
+		@QueryParam("emailFragment") final String emailFragment,
+		@QueryParam("group") final Person.Group group,
+		@QueryParam("title") final String title,
+		@QueryParam("surname") final String surname,
+		@QueryParam("forename") final String forename,
+		@QueryParam("street") final String street,
+		@QueryParam("city") final String city,
+		@QueryParam("country") final String country,
+		@QueryParam("postcode") final String postcode
 
 
-		
 		) throws ClientErrorException {
 		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
 
@@ -79,7 +91,14 @@ public class PersonService {
 		query.setParameter("maxModified", maxModified);
 		query.setParameter("email", email);
 		query.setParameter("emailFragment", emailFragment);
-
+		query.setParameter("group", group);
+		query.setParameter("title", title);
+		query.setParameter("surname", surname);
+		query.setParameter("forename", forename);
+		query.setParameter("street", street);
+		query.setParameter("city", city);
+		query.setParameter("country", country);
+		query.setParameter("postcode", postcode);
 
 
 	
