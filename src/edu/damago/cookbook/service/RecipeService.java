@@ -1,6 +1,5 @@
 package edu.damago.cookbook.service;
 
-import java.util.Set;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import javax.validation.constraints.Positive;
@@ -21,18 +20,22 @@ import edu.damago.tool.RestJpaLifecycleProvider;
 @Path("recipes")
 public class RecipeService {
 	
-	static private final String QUERY_TYPES = "select t.identity from Recipe as t where "
-		+ "(:minCreated is null or t.created >= :minCreated) and "
-		+ "(:maxCreated is null or t.created <= :maxCreated) and "
-		+ "(:minModified is null or t.modified >= :minModified) and "
-		+ "(:maxModified is null or t.modified <= :maxModified) and "
-		+ "(:title is null or t.title = :title) and "
-		+ "(:descriptionFragment is null or t.description like concat('%', :descriptionFragment, '%')) and "
-		+ "(:category is null or t.category = :category) and "
-		+ "(:description is null or t.description = :description) and "
-		+ "(:instruction is null or t.instruction = :instruction) and "
-		+ "(:instructionFragment is null or t.instruction like concat('%', :instructionFragment, '%'))"
-		;
+	static private final String QUERY_TYPES = "select r.identity from Recipe as r where "
+		+ "(:minCreated is null or r.created >= :minCreated) and "
+		+ "(:maxCreated is null or r.created <= :maxCreated) and "
+		+ "(:minModified is null or r.modified >= :minModified) and "
+		+ "(:maxModified is null or r.modified <= :maxModified) and "
+		+ "(:title is null or r.title = :title) and "
+		+ "(:descriptionFragment is null or r.description like concat('%', :descriptionFragment, '%')) and "
+		+ "(:category is null or r.category = :category) and "
+		+ "(:description is null or r.description = :description) and "
+		+ "(:instruction is null or r.instruction = :instruction) and "
+		+ "(:instructionFragment is null or r.instruction like concat('%', :instructionFragment, '%')) and "
+		+ "(:pescatarian is null or (true = all(select i.type.pescatarian from r.ingredients as i)) = :pescatarian) and "
+		+ "(:lactoOvoVegetarian is null or (true = all(select i.type.lactoOvoVegetarian from r.ingredients as i)) = :lactoOvoVegetarian) and "
+		+ "(:lactoVegetarian is null or (true = all(select i.type.lactoVegetarian from r.ingredients as i)) = :lactoVegetarian) and "
+		+ "(:vegan is null or (true = all(select i.type.vegan from r.ingredients as i)) = :vegan)";
+;
 		
 	
 	/**
@@ -48,9 +51,13 @@ public class RecipeService {
 	 * @parm category the category, or null for none
 	 * @parm description, the description, or null for none
 	 * @parm instructionFragment, the instruction fragment, or null for none
-	 * 
+	 * @parm pescatarian
+	 * @parm lactoOvoVegetarian
+	 * @parm lactoVegetarian
+	 * @parm lactoVegetarian
 	 * @parm ingredients the ingredients´, or null for none
 	 * @return the Recipe as JSON
+	 * 
 	 * @throws ClientErrorException if there is no matching Recipe (404)
 	 */
 	@GET
@@ -67,7 +74,11 @@ public class RecipeService {
 		@QueryParam("category") final Category category,
 		@QueryParam("description") final String description,
 		@QueryParam("instruction") final String instruction,
-		@QueryParam("instructionFragment") final String instructionFragment
+		@QueryParam("instructionFragment") final String instructionFragment,
+		@QueryParam("pescatarian") final Boolean pescatarian,
+		@QueryParam("lactoOvoVegetarian") final Boolean lactoOvoVegetarian,
+		@QueryParam("lactoVegetarian") final Boolean lactoVegetarian,
+		@QueryParam("vegan") final Boolean vegan
 		
 		
 	) throws ClientErrorException {
@@ -86,6 +97,10 @@ public class RecipeService {
 		query.setParameter("description", description);
 		query.setParameter("instruction", instruction);
 		query.setParameter("instructionFragment", instructionFragment);
+		query.setParameter("pescatarian", pescatarian);
+		query.setParameter("lactoOvoVegetarian", lactoOvoVegetarian);
+		query.setParameter("lactoVegetarian", lactoVegetarian);
+		query.setParameter("vegan", vegan);
 
 	
 		final Recipe[] types = query

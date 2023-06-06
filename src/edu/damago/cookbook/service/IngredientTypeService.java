@@ -63,7 +63,8 @@ public class IngredientTypeService {
 		@QueryParam("lacto-ovo-vegetarian") final Boolean lactoOvoVegetarian,
 		@QueryParam("lacto-vegetarian") final Boolean lactoVegetarian,
 		@QueryParam("vegan") final Boolean vegan
-	) throws ClientErrorException {
+	
+		) throws ClientErrorException {
 		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
 
 		final TypedQuery<Long> query = entityManager.createQuery(QUERY_TYPES, Long.class);

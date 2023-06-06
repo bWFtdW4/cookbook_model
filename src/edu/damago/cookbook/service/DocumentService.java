@@ -25,7 +25,9 @@ public class DocumentService {
 		+ "(:minModified is null or t.modified >= :minModified) and "
 		+ "(:maxModified is null or t.modified <= :maxModified) and "
 		+ "(:type is null or t.type = :type) and "
-		+ "(:hash is null or t.hash = :hash)"
+		+ "(:hash is null or t.hash = :hash) and "
+		+ "(:minSize is null or length(d.content) >= :minSize) and "
+		+ "(:maxSize is null or length(d.content) <= :maxSize)"
 		;
 
 
@@ -39,6 +41,8 @@ public class DocumentService {
 	 * @param maxModified the maximum modification timestamp, or null for none
 	 * @param type the type, or null for none
 	 * @param hash the hash, or null for none
+	 * @param minSize the minimum content length, or null for none
+	 * @param maxSize the maximum content length, or null for none
 	 * @return documents as JSON
 	 * @throws ClientErrorException if there is no matching ingredient type (404)
 	 */
@@ -52,7 +56,9 @@ public class DocumentService {
 		@QueryParam("min-modified") final Long minModified,
 		@QueryParam("max-modified") final Long maxModified,
 		@QueryParam("type") final String docType,
-		@QueryParam("hash") final String hash
+		@QueryParam("hash") final String hash,
+		@QueryParam("min-size") @PositiveOrZero final Long minSize,
+		@QueryParam("max-size") @PositiveOrZero final Long maxSize
 		
 	) throws ClientErrorException {
 		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
@@ -66,6 +72,8 @@ public class DocumentService {
 		query.setParameter("maxModified", maxModified);
 		query.setParameter("type", docType);
 		query.setParameter("hash", hash);
+		query.setParameter("minSize", minSize);
+		query.setParameter("maxSize", maxSize);
 
 		final Document[] types = query
 			.getResultList()
