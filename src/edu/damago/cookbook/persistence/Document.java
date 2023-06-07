@@ -84,4 +84,9 @@ public class Document extends BaseEntity {
 	protected void setContent (final byte[] content) {
 		this.content = content;
 	}
+	
+	
+	public int getSize () {
+		return this.content.length;
+	}
 }
