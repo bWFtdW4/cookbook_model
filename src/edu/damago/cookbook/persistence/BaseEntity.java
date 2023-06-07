@@ -1,5 +1,6 @@
 package edu.damago.cookbook.persistence;
 
+import javax.json.bind.annotation.JsonbVisibility;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.Entity;
@@ -12,6 +13,7 @@ import javax.persistence.InheritanceType;
 import javax.persistence.Table;
 import javax.validation.constraints.Positive;
 import edu.damago.tool.Copyright;
+import edu.damago.tool.JsonProtectedPropertyStrategy;
 
 
 /**
@@ -23,6 +25,7 @@ import edu.damago.tool.Copyright;
 @Table(schema = "cookbook", name = "BaseEntity", indexes = @Index(columnList = "discriminator"))
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "discriminator")
+@JsonbVisibility(JsonProtectedPropertyStrategy.class)
 @Copyright(year = 2012, holders = "Sascha Baumeister")
 public abstract class BaseEntity implements Comparable<BaseEntity> {
 
