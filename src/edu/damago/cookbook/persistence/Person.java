@@ -193,4 +193,6 @@ public class Person extends BaseEntity {
 	protected void setRecipes (final Set<Recipe> recipes) {
 		this.recipes = recipes;
 	}
+	
+
 }

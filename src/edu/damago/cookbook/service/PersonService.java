@@ -1,5 +1,6 @@
 package edu.damago.cookbook.service;
 
+import javax.persistence.Cache;
 import javax.persistence.EntityManager;
 import javax.persistence.RollbackException;
 import javax.persistence.TypedQuery;
@@ -7,6 +8,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.PositiveOrZero;
+import javax.validation.constraints.Size;
 import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -19,8 +21,10 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.ServerErrorException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
+import edu.damago.cookbook.persistence.BaseEntity;
 import edu.damago.cookbook.persistence.Document;
 import edu.damago.cookbook.persistence.Person;
+import edu.damago.tool.HashCodes;
 import edu.damago.tool.RestJpaLifecycleProvider;
 
 
@@ -109,15 +113,15 @@ public class PersonService {
 
 
 	
-		final Person[] types = query
+		final Person[] people = query
 			.getResultList()
 			.stream()
 			.map(identity -> entityManager.find(Person.class, identity))
-			.filter(type -> type != null)
+			.filter(person -> person != null)
 			.sorted()
 			.toArray(Person[]::new);
 
-		return types;
+		return people;
 	}
 	
 	
@@ -157,6 +161,7 @@ public class PersonService {
 	@Produces(MediaType.TEXT_PLAIN)
 		public long insertOrUpdateType (
 		@HeaderParam(BasicAuthenticationReceiverFilter.REQUESTER_IDENTITY) @Positive final long requesterIdentity,
+		@HeaderParam("X-Set-Password") @Size(min=3) final String password,
 		@NotNull @Valid final Person personTemplate 
 	) throws ClientErrorException {
 		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
@@ -191,14 +196,15 @@ public class PersonService {
 		person.getAddress().setCity(personTemplate.getAddress().getCity());
 		person.getAddress().setCountry(personTemplate.getAddress().getCountry());
 		person.getAddress().setPostcode(personTemplate.getAddress().getPostcode());
-		
-		
-		if (insertMode)
-			entityManager.persist(person);
-		else
-			entityManager.flush();
+		person.getPhones().retainAll(personTemplate.getPhones());
+		person.getPhones().addAll(personTemplate.getPhones());
+		if (requester.getGroup().ordinal() >= personTemplate.getGroup().ordinal()) person.setGroup(personTemplate.getGroup());
+		if (password != null) person.setPasswordHash(HashCodes.sha2HashText(256, password));
 
 		try {
+			if (insertMode) entityManager.persist(person);
+			else entityManager.flush();
+
 			entityManager.getTransaction().commit();
 		} catch (final RollbackException e) {
 			throw new ClientErrorException(Status.CONFLICT);
@@ -206,9 +212,8 @@ public class PersonService {
 			entityManager.getTransaction().begin();
 		}
 
-		// whenever our modifications cause the mirror relationship set of an entity
-		// to be modified, we need to remove said entity from the 2nd level case
-		// -> cache eviction!
+		// whenever our modifications cause the mirror relationship set of an entity to be
+		// modified, we need to remove said entity from the 2nd level case -> cache eviction!
 		// final Cache cache = entityManager.getEntityManagerFactory().getCache();
 		// cache.evict(BaseEntity.class, 42L);
 
