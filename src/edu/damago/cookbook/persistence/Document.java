@@ -27,6 +27,7 @@ import edu.damago.tool.JsonProtectedPropertyStrategy;
 public class Document extends BaseEntity {
 	static private final byte[] EMPTY_CONTENT = {};
 	static private final String EMPTY_HASH = HashCodes.sha2HashText(256, EMPTY_CONTENT);
+	static public final String FIND_BY_HASH = "select d from Document as d where d.hash = :hash";
 
 
 	@NotNull @Size(max = 63)
@@ -84,8 +85,8 @@ public class Document extends BaseEntity {
 	protected void setContent (final byte[] content) {
 		this.content = content;
 	}
-	
-	
+
+
 	public int getSize () {
 		return this.content.length;
 	}

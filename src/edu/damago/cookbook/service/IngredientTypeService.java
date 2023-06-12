@@ -4,6 +4,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.RollbackException;
 import javax.persistence.TypedQuery;
 import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.PositiveOrZero;
@@ -12,16 +13,21 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.ServerErrorException;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import edu.damago.cookbook.persistence.Document;
 import edu.damago.cookbook.persistence.IngredientType;
 import edu.damago.cookbook.persistence.Person;
+import edu.damago.tool.ContentTypes;
+import edu.damago.tool.HashCodes;
 import edu.damago.tool.RestJpaLifecycleProvider;
 
 
@@ -101,7 +107,68 @@ public class IngredientTypeService {
 
 
 	/**
-	 * HTTP Signature: GET ingredient-types/<id> IN: - OUT: application/json
+	 * HTTP Signature: POST ingredient-types IN: application/json OUT: text/plain
+	 * @param requesterIdentity the ID of the authenticated person
+	 * @param typeTemplate the ingredient type template
+	 * @return the ingredient type identity
+	 * @throws ClientErrorException if there is a problem caused by the client
+	 */
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.TEXT_PLAIN)
+	public long insertOrUpdateIngredientType (
+		@HeaderParam(BasicAuthenticationReceiverFilter.REQUESTER_IDENTITY) @Positive final long requesterIdentity,
+		@NotNull @Valid final IngredientType typeTemplate
+	) throws ClientErrorException {
+		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
+
+		final Person requester = entityManager.find(Person.class, requesterIdentity);
+		if (requester == null || requester.getGroup() != Person.Group.ADMIN) throw new ClientErrorException(Status.FORBIDDEN);
+		final boolean insertMode = typeTemplate.getIdentity() == 0;
+		
+		final IngredientType type;
+		if (insertMode) {
+			type = new IngredientType();
+
+			final Document defaultAvatar = entityManager.find(Document.class, 1L);
+			if (defaultAvatar == null) throw new ServerErrorException(Status.SERVICE_UNAVAILABLE);
+			type.setAvatar(defaultAvatar);
+		} else {
+			type = entityManager.find(IngredientType.class, typeTemplate.getIdentity());
+			if (type == null) throw new ClientErrorException(Status.NOT_FOUND);
+		}
+
+		type.setModified(System.currentTimeMillis());
+		type.setVersion(typeTemplate.getVersion());
+		type.setAlias(typeTemplate.getAlias());
+		type.setDescription(typeTemplate.getDescription());
+		type.setPescatarian(typeTemplate.isPescatarian());
+		type.setLactoVegetarian(typeTemplate.isLactoOvoVegetarian());
+		type.setLactoVegetarian(typeTemplate.isLactoVegetarian());
+		type.setVegan(typeTemplate.isVegan());
+
+		try {
+			if (insertMode) entityManager.persist(type);
+			else entityManager.flush();
+
+			entityManager.getTransaction().commit();
+		} catch (final RollbackException e) {
+			throw new ClientErrorException(Status.CONFLICT);
+		} finally {
+			entityManager.getTransaction().begin();
+		}
+
+		// whenever our modifications cause the mirror relationship set of an entity to be
+		// modified, we need to remove said entity from the 2nd level case -> cache eviction!
+		// final Cache cache = entityManager.getEntityManagerFactory().getCache();
+		// cache.evict(BaseEntity.class, 42L);
+
+		return type.getIdentity();
+	}
+
+
+	/**
+	 * HTTP Signature: GET ingredient-types/{id} IN: - OUT: application/json
 	 * @param typeIdentity the ingredient type identity
 	 * @return the ingredient type as JSON
 	 * @throws ClientErrorException if there is no matching ingredient type (404)
@@ -121,65 +188,75 @@ public class IngredientTypeService {
 
 
 	/**
-	 * HTTP Signature: POST <entity-path> IN: application/json OUT: text/plain
-	 * @param requesterIdentity the ID of the authenticated person
-	 * @param typeTemplate the ingredient type template
-	 * @return the ingredient type ID
-	 * @throws ClientErrorException if there is a problem caused by the client
+	 * HTTP Signature: GET ingredient-types/{id}/avatar IN: - OUT: image/*
+	 * @param acceptHeader the HTTP "Accept" header
+	 * @param typeIdentity the ingredient type identity
+	 * @return the matching ingredient type's avatar content
+	 * @throws ClientErrorException if there is no matching ingredient type (404)
 	 */
-	@POST
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.TEXT_PLAIN)
-	public long insertOrUpdateType (
-		@HeaderParam(BasicAuthenticationReceiverFilter.REQUESTER_IDENTITY) @Positive final long requesterIdentity,
-		@NotNull @Valid final IngredientType typeTemplate
+	@GET
+	@Path("{id}/avatar")
+	@Produces("image/*")
+	public Response findIngredientTypeAvatar (
+		@HeaderParam(HttpHeaders.ACCEPT) @NotNull @NotEmpty final String acceptHeader,
+		@PathParam("id") @Positive final long typeIdentity
 	) throws ClientErrorException {
 		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
+		final IngredientType type = entityManager.find(IngredientType.class, typeIdentity);
+		if (type == null) throw new ClientErrorException(Status.NOT_FOUND);
+
+		final Document avatar = type.getAvatar();
+		if (!ContentTypes.isAcceptable(avatar.getType(), acceptHeader)) throw new ClientErrorException(Status.NOT_ACCEPTABLE);
+		return Response.ok(avatar.getContent(), avatar.getType()).build();
+	}
+
+
+	@PUT
+	@Path("{id}/avatar")
+	@Consumes("image/*")
+	public long updateIngredientTypeAvatar (
+		@PathParam("id") @Positive final long typeIdentity,
+		@HeaderParam(BasicAuthenticationReceiverFilter.REQUESTER_IDENTITY) @Positive final long requesterIdentity,
+		@HeaderParam(HttpHeaders.CONTENT_TYPE) @NotNull @NotEmpty final String documentType,
+		@NotNull final byte[] documentContent
+	) throws ClientErrorException {
+		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
+		final IngredientType type = entityManager.find(IngredientType.class, typeIdentity);
+		if (type == null) throw new ClientErrorException(Status.NOT_FOUND);
 
 		final Person requester = entityManager.find(Person.class, requesterIdentity);
 		if (requester == null || requester.getGroup() != Person.Group.ADMIN) throw new ClientErrorException(Status.FORBIDDEN);
-		final boolean insertMode = typeTemplate.getIdentity() == 0;
-		
-		final IngredientType type;
-		if (insertMode) {
-			type = new IngredientType();
-			
-			final Document defaultAvatar = entityManager.find(Document.class, 1L);
-			if (defaultAvatar == null) throw new ServerErrorException(Status.SERVICE_UNAVAILABLE);
-			type.setAvatar(defaultAvatar);
-		} else {
-			type = entityManager.find(IngredientType.class, typeTemplate.getIdentity());
-			if (type == null) throw new ClientErrorException(Status.NOT_FOUND);
+
+		final TypedQuery<Document> query = entityManager.createQuery(Document.FIND_BY_HASH, Document.class); 
+		query.setParameter("hash", HashCodes.sha2HashText(256, documentContent));
+		final Document image = query
+			.getResultList()
+			.stream()
+			.findAny()
+			.orElseGet(() -> new Document(documentType, documentContent));
+
+		if (image.getIdentity() == 0) {
+			try {
+				entityManager.persist(image);
+
+				entityManager.getTransaction().commit();
+			} catch (final RollbackException e) {
+				throw new ClientErrorException(Status.CONFLICT);
+			} finally {
+				entityManager.getTransaction().begin();
+			}
 		}
 
-		type.setModified(System.currentTimeMillis());
-		type.setVersion(typeTemplate.getVersion());
-		type.setAlias(typeTemplate.getAlias());
-		type.setDescription(typeTemplate.getDescription());
-		type.setPescatarian(typeTemplate.isPescatarian());
-		type.setLactoVegetarian(typeTemplate.isLactoOvoVegetarian());
-		type.setLactoVegetarian(typeTemplate.isLactoVegetarian());
-		type.setVegan(typeTemplate.isVegan());
-
-		if (insertMode)
-			entityManager.persist(type);
-		else
-			entityManager.flush();
+		type.setAvatar(image);
 
 		try {
+			entityManager.flush();
+
 			entityManager.getTransaction().commit();
-		} catch (final RollbackException e) {
-			throw new ClientErrorException(Status.CONFLICT);
 		} finally {
 			entityManager.getTransaction().begin();
 		}
 
-		// whenever our modifications cause the mirror relationship set of an entity
-		// to be modified, we need to remove said entity from the 2nd level case
-		// -> cache eviction!
-		// final Cache cache = entityManager.getEntityManagerFactory().getCache();
-		// cache.evict(BaseEntity.class, 42L);
-
-		return type.getIdentity();
+		return image.getIdentity();
 	}
 }
