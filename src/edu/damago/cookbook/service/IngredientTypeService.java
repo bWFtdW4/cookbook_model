@@ -143,7 +143,7 @@ public class IngredientTypeService {
 		type.setAlias(typeTemplate.getAlias());
 		type.setDescription(typeTemplate.getDescription());
 		type.setPescatarian(typeTemplate.isPescatarian());
-		type.setLactoVegetarian(typeTemplate.isLactoOvoVegetarian());
+		type.setLactoOvoVegetarian(typeTemplate.isLactoOvoVegetarian());
 		type.setLactoVegetarian(typeTemplate.isLactoVegetarian());
 		type.setVegan(typeTemplate.isVegan());
 

@@ -10,6 +10,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.RollbackException;
 import javax.persistence.TypedQuery;
 import javax.validation.Valid;
+import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
@@ -44,7 +45,7 @@ import edu.damago.tool.RestJpaLifecycleProvider;
 
 @Path("recipes")
 public class RecipeService {
-	static private final String QUERY_RECIPES = "select r.identity from Recipe as r where "
+	static private final String QUERY_RECIPES = "select r.identity from Recipe as r left outer join r.owner as o where "
 		+ "(:minCreated is null or r.created >= :minCreated) and "
 		+ "(:maxCreated is null or r.created <= :maxCreated) and "
 		+ "(:minModified is null or r.modified >= :minModified) and "
@@ -56,7 +57,8 @@ public class RecipeService {
 		+ "(:pescatarian is null or (true = all(select i.type.pescatarian from r.ingredients as i)) = :pescatarian) and "
 		+ "(:lactoOvoVegetarian is null or (true = all(select i.type.lactoOvoVegetarian from r.ingredients as i)) = :lactoOvoVegetarian) and "
 		+ "(:lactoVegetarian is null or (true = all(select i.type.lactoVegetarian from r.ingredients as i)) = :lactoVegetarian) and "
-		+ "(:vegan is null or (true = all(select i.type.vegan from r.ingredients as i)) = :vegan)";
+		+ "(:vegan is null or (true = all(select i.type.vegan from r.ingredients as i)) = :vegan) and "
+		+ "(:ownerEmail is null or (o.email = :ownerEmail))";
 
 
 	/**
@@ -83,9 +85,11 @@ public class RecipeService {
 		@QueryParam("description-fragment") final String descriptionFragment,
 		@QueryParam("instruction-fragment") final String instructionFragment,
 		@QueryParam("pescatarian") final Boolean pescatarian,
-		@QueryParam("lactoOvoVegetarian") final Boolean lactoOvoVegetarian,
-		@QueryParam("lactoVegetarian") final Boolean lactoVegetarian,
-		@QueryParam("vegan") final Boolean vegan
+		@QueryParam("lacto-ovo-vegetarian") final Boolean lactoOvoVegetarian,
+		@QueryParam("lacto-vegetarian") final Boolean lactoVegetarian,
+		@QueryParam("vegan") final Boolean vegan,
+		@QueryParam("owner-email") @Email final String ownerEmail
+		
 	) {
 		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
 
@@ -104,6 +108,7 @@ public class RecipeService {
 		query.setParameter("lactoOvoVegetarian", lactoOvoVegetarian);
 		query.setParameter("lactoVegetarian", lactoVegetarian);
 		query.setParameter("vegan", vegan);
+		query.setParameter("ownerEmail", ownerEmail);
 
 		final Recipe[] recipes = query
 			.getResultList()

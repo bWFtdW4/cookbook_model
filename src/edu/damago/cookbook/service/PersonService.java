@@ -61,7 +61,7 @@ public class PersonService {
 	 */
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public Person[] queryRecipes (
+	public Person[] queryPerson (
 		@QueryParam("result-offset") @PositiveOrZero final Integer resultOffset,
 		@QueryParam("result-size") @PositiveOrZero final Integer resultSize,
 		@QueryParam("min-created") final Long minCreated,
