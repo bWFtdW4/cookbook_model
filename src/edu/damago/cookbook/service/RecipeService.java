@@ -1,5 +1,6 @@
 package edu.damago.cookbook.service;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -89,7 +90,6 @@ public class RecipeService {
 		@QueryParam("lacto-vegetarian") final Boolean lactoVegetarian,
 		@QueryParam("vegan") final Boolean vegan,
 		@QueryParam("owner-email") @Email final String ownerEmail
-		
 	) {
 		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
 
@@ -213,12 +213,12 @@ public class RecipeService {
 	@GET
 	@Path("{id}/avatar")
 	@Produces("image/*")
-	public Response findTypeAvatar (
+	public Response findRecipeAvatar (
 		@HeaderParam(HttpHeaders.ACCEPT) @NotNull @NotEmpty final String acceptHeader,
-		@PathParam("id") @Positive final long typeIdentity
+		@PathParam("id") @Positive final long recipeIdentity
 	) throws ClientErrorException {
 		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
-		final Recipe recipe = entityManager.find(Recipe.class, typeIdentity);
+		final Recipe recipe = entityManager.find(Recipe.class, recipeIdentity);
 		if (recipe == null) throw new ClientErrorException(Status.NOT_FOUND);
 
 		final Document avatar = recipe.getAvatar();
@@ -280,7 +280,7 @@ public class RecipeService {
 	@GET
 	@Path("{id}/ingredients")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Ingredient[] queryeRecipeIngredients (
+	public Ingredient[] queryRecipeIngredients (
 		@PathParam("id") @Positive final long recipeIdentity
 	) throws ClientErrorException {
 		final EntityManager entityManager = RestJpaLifecycleProvider.entityManager("local_database");
@@ -314,42 +314,45 @@ public class RecipeService {
 			throw new ClientErrorException(Status.BAD_REQUEST);
 		}
 
-		try {
-			try {
-				for (final Map<String,Object> map : maps) {
-					final long ingredientIdentity = ((Number) map.get("identity")).longValue();
-					final long ingredientTypeReference = ((Number) map.get("typeReference")).longValue();
-					if (ingredientTypeReference == 0) throw new ClientErrorException(Status.BAD_REQUEST);
+		final Set<Ingredient> ingredients = new HashSet<>();
+		try  {
+			for (final Map<String,Object> map : maps) {
+				final long ingredientIdentity = ((Number) map.get("identity")).longValue();
+				final long ingredientTypeReference = ((Number) map.get("typeReference")).longValue();
+				if (ingredientTypeReference == 0) throw new ClientErrorException(Status.BAD_REQUEST);
 
-					final IngredientType ingredientType = entityManager.find(IngredientType.class, ingredientTypeReference);
-					if (ingredientType == null) throw new ClientErrorException(Status.NOT_FOUND);
-					final boolean insertMode = ingredientIdentity == 0;
+				final IngredientType ingredientType = entityManager.find(IngredientType.class, ingredientTypeReference);
+				if (ingredientType == null) throw new ClientErrorException(Status.NOT_FOUND);
 
-					final Ingredient ingredient;
-					if (insertMode) {
-						ingredient = new Ingredient(recipe, ingredientType);
-					} else {
-						ingredient = entityManager.find(Ingredient.class, ingredientIdentity);
-						if (ingredient == null) throw new ClientErrorException(Status.NOT_FOUND);
-					}
-
-					ingredient.setModified(System.currentTimeMillis());
-					ingredient.setVersion(((Number) map.get("version")).intValue());
-					ingredient.setAmount(((Number) map.get("amount")).floatValue());
-					ingredient.setUnit(Unit.valueOf((String) map.get("unit")));
-
-					if (insertMode) entityManager.persist(ingredient);
-					else entityManager.flush();
+				final Ingredient ingredient;
+				if (ingredientIdentity == 0) {
+					ingredient = new Ingredient(recipe);
+				} else {
+					ingredient = entityManager.find(Ingredient.class, ingredientIdentity);
+					if (ingredient == null) throw new ClientErrorException(Status.NOT_FOUND);
 				}
 
-				entityManager.getTransaction().commit();
-			} catch (final NullPointerException | IllegalArgumentException | ClassCastException e) {
-				throw new ClientErrorException(Status.BAD_REQUEST);
-			} finally {
-				entityManager.getTransaction().begin();
+				ingredients.add(ingredient);
+				ingredient.setModified(System.currentTimeMillis());
+				ingredient.setVersion(((Number) map.get("version")).intValue());
+				ingredient.setAmount(((Number) map.get("amount")).floatValue());
+				ingredient.setUnit(Unit.valueOf((String) map.get("unit")));
+				ingredient.setType(ingredientType);
 			}
+		} catch (final NullPointerException | IllegalArgumentException | ClassCastException e) {
+			throw new ClientErrorException(Status.BAD_REQUEST);
+		}
+
+		try {
+			ingredients.stream().filter(ingredient -> ingredient.getIdentity() == 0).forEach(ingredient -> entityManager.persist(ingredient));
+			recipe.getIngredients().stream().filter(ingredient -> !ingredients.contains(ingredient)).forEach(ingredient -> entityManager.remove(ingredient));
+			entityManager.flush();
+
+			entityManager.getTransaction().commit();
 		} catch (final RollbackException e) {
 			throw new ClientErrorException(Status.CONFLICT);
+		} finally {
+			if (!entityManager.getTransaction().isActive()) entityManager.getTransaction().begin();
 		}
 
 		// whenever our modifications cause the mirror relationship set of an entity to be

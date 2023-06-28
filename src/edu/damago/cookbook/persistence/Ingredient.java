@@ -30,7 +30,6 @@ import edu.damago.tool.JsonProtectedPropertyStrategy;
 public class Ingredient extends BaseEntity {
 	static public enum Unit { LITRE, GRAM, TEASPOON, TABLESPOON, PINCH, CUP, CAN, TUBE, BUSHEL, PIECE }
 
-
 	@Positive
 	@Column(nullable = false, updatable = true)
 	private float amount;
@@ -47,18 +46,17 @@ public class Ingredient extends BaseEntity {
 
 	// avoid @NotNull with @ManyToOne!
 	@ManyToOne(optional = false)
-	@JoinColumn(name = "typeReference", nullable = false, updatable = false, insertable = true)
+	@JoinColumn(name = "typeReference", nullable = false, updatable = true)
 	private IngredientType type;
 
 
 	protected Ingredient () {
-		this(null, null);
+		this(null);
 	}
 
 
-	public Ingredient (final Recipe recipe, final IngredientType type) {
+	public Ingredient (final Recipe recipe) {
 		this.recipe = recipe;
-		this.type = type;
 	}
 
 
@@ -151,7 +149,7 @@ public class Ingredient extends BaseEntity {
 	}
 
 
-	protected void setType (final IngredientType type) {
+	public void setType (final IngredientType type) {
 		this.type = type;
 	}
 }
