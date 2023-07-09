@@ -1,7 +1,6 @@
 package edu.damago.cookbook.service;
 
 import java.util.List;
-import java.util.stream.Stream;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import javax.validation.constraints.Positive;
@@ -13,7 +12,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import edu.damago.cookbook.persistence.Animal;
-import edu.damago.cookbook.persistence.Person;
 import edu.damago.tool.RestJpaLifecycleProvider;
 
 
